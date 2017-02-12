@@ -1,5 +1,4 @@
-function update-dependency($repo = "C:\Users\dustinf\Source\Repos", $lib = "DepLib", $ver="1.0.5", $targetBranch="Feature2")
-{
+function update-dependency($repo = "C:\Users\dustinf\Source\Repos", $lib = "DepLib", $ver="1.0.5", $targetBranch="Feature2"){
     push-location $repo
 	$filter = "packages.config";
     write-host "searching all packages.config in $repo for $lib"
@@ -8,7 +7,7 @@ function update-dependency($repo = "C:\Users\dustinf\Source\Repos", $lib = "DepL
 	}
 	
     $files = gci $repo -filter $filter -recurse
-    $files | % { 
+    $files | % {
         $content = gc $_.FullName | select-string -Pattern $lib
         if($content -and $content -ne ""){
            $content = $content.ToString();
@@ -23,22 +22,27 @@ function update-dependency($repo = "C:\Users\dustinf\Source\Repos", $lib = "DepL
                     write-host "Old: $temp New: $ver"
                     $toUpdate = read-host "Update? [y]/n";
                     if($toUpdate -ieq "y" -or $toUpdate -eq ""){
-                        # first update the file contents
+                        ## first update the file contents
                         $fc = gc $_.FullName;
                         $newcontent = $content.Replace($temp, $ver);
                         $fc = $fc.Replace($content, $newcontent);
                         set-content -path $_.FullName -value $fc;
-                        write-host -ForegroundColor Green "Updated";
-
-                        # ask user if we should continue with more files or go ahead and commit the change to the branch
-                        # TODO: ask the user
+                        ## restore new package
                         Push-Location $_.Directory.FullName
-                       
+                        $nuget = "F:\Utility\nuget.exe"
+                        & nuget restore
+
+                        ## build
+                        ## https://blog.corsamore.com/2013/08/31/drop-msbuild-have-a-glass-of-psake/
+                        ## https://github.com/deadlydog/Invoke-MsBuild
+                        Invoke-Psake -framework 4.0 .\build.ps1 $target
+
+                        write-host -ForegroundColor Green "Updated";
                     }
                 }
-            } 
+            }
         }
-    }       
+    }
 }
 
 update-dependency
